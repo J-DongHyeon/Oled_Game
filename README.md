@@ -1,7 +1,7 @@
 # Oled-Game
 oled Game
 
-준비물
+# 준비물
 - 아두이노 UNO 보드 R3
 - 적외선 센서, 적외선 송신기 (Car MP3 remote controller)
 - Oled (SH1106 SPI 통신 기반 모듈)
@@ -12,15 +12,15 @@ UNO 보드 R3 <-> Oled : SPI 통신
 
 u8glib 라이브러리를 사용하여 Oled에 그림
 
-연결 완료 사진
+# 연결 완료 사진
 
 <img width="471" alt="2021-07-18 22;59;03" src="https://user-images.githubusercontent.com/86474141/126070102-5cddf993-82ab-41b4-a8d0-9e4b2ae5b4e1.PNG">
 
-회로도
+# 회로도
 
 <img width="700" alt="2021-07-17 19;52;14" src="https://user-images.githubusercontent.com/86474141/126034769-8b9c1954-091c-497f-892f-857ecae49f5f.PNG">
 
-게임 플레이 영상
+# 게임 플레이 영상
 
 ![ezgif com-gif-maker](https://user-images.githubusercontent.com/86474141/126072594-909f29d7-0fe1-4cb9-9153-c00f8f63c711.gif)
 
