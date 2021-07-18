@@ -3,7 +3,7 @@ oled Game
 
 준비물
 - 아두이노 UNO 보드 R3
-- 적외선 센서, 적외선 송신기
+- 적외선 센서, 적외선 송신기 (Car MP3 remote controller)
 - Oled (SH1106 SPI 통신 기반 모듈)
 
 적외선 센서 <-> 적외선 송신기 : 적외선 통신
