@@ -22,6 +22,7 @@ u8glib 라이브러리를 사용하여 Oled에 그림
 
 게임 플레이 영상
 
+![ezgif com-gif-maker](https://user-images.githubusercontent.com/86474141/126072594-909f29d7-0fe1-4cb9-9153-c00f8f63c711.gif)
 
 
 # 조작 방법
