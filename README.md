@@ -18,7 +18,8 @@ u8glib 라이브러리를 사용하여 Oled에 그림
 
 ### 회로도
 
-<img width="700" alt="2021-07-17 19;52;14" src="https://user-images.githubusercontent.com/86474141/126034769-8b9c1954-091c-497f-892f-857ecae49f5f.PNG">
+<img width="537" alt="회로도" src="https://user-images.githubusercontent.com/86474141/126897813-1ae3a291-f495-41cb-ab88-cad2370c5893.PNG">
+
 
 ### 게임 플레이 영상
 
