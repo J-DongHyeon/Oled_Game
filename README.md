@@ -1,8 +1,18 @@
 
-<h1 align="center"> Oled Game </h1>
+<h1 align="center"> OLED GAME </h1>
 
 <h4 align="center"> Avoiding Obstacles </h4>
+</br>
 
+<p align= "center">
+<img src=/docs/readme_Imgs/readme_img1.PNG width=500 height=350></p> 
+</br></br>
+
+------------------------------------------
+
+# 1. 기획 계기
+
+> &nbsp;
 
 ### 준비물
 - 아두이노 UNO 보드 R3
