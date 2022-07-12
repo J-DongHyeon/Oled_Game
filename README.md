@@ -1,5 +1,8 @@
-# Oled-Game
-oled Game
+
+<h1 align="center"> Oled Game </h1>
+
+<h4 align="center"> Avoiding Obstacles </h4>
+
 
 ### 준비물
 - 아두이노 UNO 보드 R3
