@@ -12,12 +12,21 @@
 
 # 1. 기획 계기
 
-
 <p align= "center">
 <img src=/docs/readme_Imgs/readme_img2.PNG width=500 height=350></p> 
 
 > &nbsp;`Arduino UNO 보드` 를 이용하여 여러 센서들을 테스트 해보던 중, `OLED 모듈` 을 연결하여 테스트 할 때 흥미로웠다. `U8glib.h` 라이브러리를 이용함으로써 OLED에 내가 원하는 문양, 텍스트들이 곧바로 출력되는 것을 보니 신기했고, 시간을 들여 하나의 프로젝트를 만들면 재미있겠다는 생각이 들었다. <br>
 > &nbsp;OLED 모듈 사용법을 익힐 겸, 재미있는 프로젝트를 진행할 겸 `나만의 OLED GAME` 을 만들기 위한 구상을 하였고, 이를 구현하기 위해 본 프로젝트를 진행하였다.
+<br><br>
+
+------------------------------------------
+
+# 2. 사용 부품 & 개발환경
+
+## 사용 부품
+
+<p align= "center">
+<img src=/docs/readme_Imgs/readme_img3.PNG width=500 height=350></p> 
 
 ### 준비물
 - 아두이노 UNO 보드 R3
