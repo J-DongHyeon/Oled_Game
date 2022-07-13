@@ -2,7 +2,6 @@
 #include <U8glib.h>
 #include <EEPROM.h>
 
-
 U8GLIB_SH1106_128X64 u8g(13, 11, 10, 9, 8);
 
 /*
@@ -18,7 +17,8 @@ decode_results results;
 unsigned long ifrRcv;
 int rcvCtrl;
 
-unsigned long timeLimit[22]; // total number of obstacles : 22
+// 몬스터의 총 개수는 22개 이다.
+unsigned long timeLimit[22];
 int timeRandom[22];
 
 int play_time_sec;
@@ -27,19 +27,19 @@ int play_time_min = 0;
 char load_sct = 0;
 char load_gage = 0;
 
-int yspaR[11]; // y-position of the right obstacle
-int xspaR[11]; // x-position of the right obstacle
-int yspaL[11]; // y-position of the left obstacle
-int xspaL[11]; // x-position of the left obstacle
+int yspaR[11]; // 오른쪽에서 나오는 몬스터의 y좌표 정보
+int xspaR[11]; // 오른쪽에서 나오는 몬스터의 x좌표 정보
+int yspaL[11]; // 왼쪽에서 나오는 몬스터의 y좌표 정보
+int xspaL[11]; // 왼쪽에서 나오는 몬스터의 x좌표 정보
 int Length = sizeof(timeRandom) / sizeof(timeRandom[0]);
 int timeLevel;
 
+int yCtrl = u8g.getHeight() / 2; // 캐릭터의 y좌표 정보
+int xCtrl = u8g.getWidth() / 2; // 캐릭터의 x좌표 정보
 
-int yCtrl = u8g.getHeight() / 2; // character's y position
-int xCtrl = u8g.getWidth() / 2; // character's x position
-int attack_xspa[4];
-int attack_yspa[4];
-int attack_seek[4];
+int attack_xspa[4]; // 총알의 x좌표
+int attack_yspa[4]; // 총알의 y좌표
+int attack_seek[4]; // 총알은 최대 4개 까지만 연속 발사할 수 있다.
 int attack_size = sizeof(attack_seek)/sizeof(attack_seek[0]);
 int attack_idx = -1;
 int obs_kill = 0;
@@ -52,7 +52,6 @@ int menuCur = 0;
 int optionCur = 0;
 int resetCur = 2;
 int level = 1;
-
 
 int menu_state = 1;
 int option_state = 0;
@@ -318,8 +317,6 @@ void lineUp(int timeRand[]) { // obstacle alignment
   }
 }
 
-
-
 void Switch () {
   for (int a=1; a<Length; a++) {
     if (timeRandom[0] > timeRandom[a]) {
@@ -361,9 +358,6 @@ void loading() { // loading screen
       u8g.drawBitmapP(40, 13, 4, 41, loading2);
       break;
   }
-
-  
-  
 }
 
 void upper() { // top of the main screen
@@ -413,20 +407,16 @@ void upper() { // top of the main screen
 }
 
 void menu () {// main screen
-
   upper();
   
   int w = u8g.getWidth();
   int d;
   int d1;
   
-
   u8g.drawBitmapP(-2, 20, 4, 41, bull);
   u8g.drawBitmapP(103, 20, 3, 32, brawl);
   
   u8g.drawStr(w-u8g.getStrWidth("Ver 1.0"), u8g.getHeight()-1, "Ver 1.0");
-  
-  
   
   u8g.setFont(u8g_font_unifont);
   int h = u8g.getFontAscent() - (u8g.getFontDescent() - 1);
@@ -441,12 +431,10 @@ void menu () {// main screen
       u8g.setDefaultBackgroundColor();
     } 
       u8g.drawStr(d, (i+2.5)*h, menuStr[i]);
-    
   }
 }
 
 void option() { // Options menu screen
-
   upper();
   
   u8g.setFont(u8g_font_unifont);
@@ -506,8 +494,6 @@ void scores() { // Score menu screen
   u8g.drawFrame(w-13, 2, 13, h-2);
   u8g.drawBox(w-13, 2, 8, h-2);
 
-
-  
   u8g.setFont(u8g_font_unifont);
   
   h = u8g.getFontAscent() - (u8g.getFontDescent() - 1);
@@ -564,7 +550,6 @@ void scoresReset () { // option -> Score reset screen
 
 
 void reset() { // Initialize the game execution environment
-
   switch (level) {
     case 1 :
       timeLevel = 75;
@@ -600,15 +585,13 @@ void reset() { // Initialize the game execution environment
     attack_seek[i] = 0;
   }
   obs_kill = 0;
-
-  
-
 }
 
 void lineUp_eep() { // Scores are stored in EEPROM in record order
   for (int i=0; i<score_num; i++) {
     total_score_arr[i] = (EEPROM.read(i) * 60) + EEPROM.read(i+10);
   }
+     
   int x;
   for(int a=0; a<score_num-1; a++) {
     x=a;
@@ -626,15 +609,12 @@ void lineUp_eep() { // Scores are stored in EEPROM in record order
   }
 }
 
-
-
 void swap_eep(int a, int b) {
   unsigned long temp;
   temp = total_score_arr[a];
   total_score_arr[a] = total_score_arr[b];
   total_score_arr[b] = temp;
 }
-
 
 void score_eep() { // Save latest records to EEPROM
   int compare_score = (EEPROM.read(5) * 60) + EEPROM.read(15);
@@ -653,10 +633,7 @@ void reset_eep() {
   }
 }
 
-
-void setup() {
-
-  
+void setup() {  
   irrecv.enableIRIn();
 
   reset();
@@ -673,15 +650,9 @@ void setup() {
     load_gage = millis() / 68;
     delay(50);
   }
-
-  
-
 }
  
 void loop() {
- 
-  
-
  while (menu_state) { // handling for the main screen
 
    reset();
@@ -697,7 +668,6 @@ void loop() {
 
     
     switch (ifrRcv) {
-
       case 0xE7 : // down button
         menuCur--;
         if (menuCur == -1) {
@@ -711,7 +681,6 @@ void loop() {
         }
       break;
       case 0xC7 : // ok button
-        
         if(menuCur == 0) {
           menu_state = 0;
           timeM_score = millis();
@@ -773,8 +742,7 @@ void loop() {
           break;
       }
     }
-
-          
+       
             while(reset_state){ // handling for the score reset screen
               u8g.firstPage();
                do {
@@ -806,14 +774,7 @@ void loop() {
                     break;
                 }
               }
-              }
-            
-          
-          
-        
-          
-      
-    
+              }  
   }
 
   while(scores_state) { // handling for the score screen
@@ -831,22 +792,11 @@ void loop() {
           scores_state = 0;
           break;
       }
-    }
-    
+    } 
   }
-
-  
  }
   
-  
-  
- 
-  
-  
-  
-  
   for(xspaR[0]=u8g.getWidth(); xspaR[0]>-9; xspaR[0]--) { // handling for the movement of obstacles
-
 
   if (millis() - timeLimit[0] > timeRandom[0]) {
     timeLimit[0] = millis();
@@ -860,7 +810,6 @@ void loop() {
   } else {
       while (true) {
         if(millis() - timeLimit[0] > timeRandom[0]) {
-          
           break;
         }
       }
@@ -891,19 +840,17 @@ void loop() {
       }
     }
     }
-
     
   if(irrecv.decode(&results)) {
-    
     ifrRcv = results.value & 0xFF;
     
     irrecv.resume();
 
     switch (ifrRcv) {
-      case 0xE7 : // down button
+      case 0xE7 : // up button
         rcvCtrl = 0;
         break;
-      case 0xB5 : // up button
+      case 0xB5 : // down button
         rcvCtrl = 1;
         break;
       case 0xFF :
@@ -922,10 +869,6 @@ void loop() {
       default :
         rcvCtrl = 999;
     }
-
-
-    
-    
 
     switch (rcvCtrl) {
     case 0 : 
@@ -954,7 +897,6 @@ void loop() {
         xCtrl = 0;
       }
       break;
-  
   }
   }
 
@@ -995,11 +937,7 @@ void loop() {
       inGame_sec = 0;
       inGame_mil = 0;
       
-      while(true) {
-        
-        
-        
-        
+      while(true) {        
         u8g.firstPage();
            do {
             end_draw();
@@ -1008,35 +946,20 @@ void loop() {
           ifrRcv = results.value & 0xFF;
           irrecv.resume();
 
-          if(ifrRcv == 0xC7) { // ok button
-          
-          
+          if(ifrRcv == 0xC7) { // ok button         
           menu_state = 1;
-          i = Length;
+          i = Length / 2;
           xspaR[0] = -9;
-          
           break;
         }
-        }
-        
+        }        
      }
-    }
-    
-    }
-    
-    
+    }    
+    }        
   }
-
-  
-    
-  
-  
 
   timeRandom[0] = random(timeLevel, timeLevel+30);
   yspaR[0] = random(u8g.getHeight() - 12) + 1;
 
   Switch();
-  
- 
-
 }
