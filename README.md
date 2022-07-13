@@ -96,3 +96,4 @@
 # 6. 참고 사이트
 
 #### 📙 https://tony100.tistory.com/entry/%EC%B5%9C%EA%B3%A0%EC%9D%98-%EB%94%94%EC%8A%A4%ED%94%8C%EB%A0%88%EC%9D%B4%EC%9A%A9-%EB%9D%BC%EC%9D%B4%EB%B8%8C%EB%9F%AC%EB%A6%AC-u8glib
+#### 📙 https://rottenstar.tistory.com/35
