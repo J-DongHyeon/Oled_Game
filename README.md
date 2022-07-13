@@ -1,7 +1,7 @@
 
 <h1 align="center"> OLED GAME </h1>
 
-<h4 align="center"> Avoiding Obstacles </h4>
+<h4 align="center"> Avoiding Monsters </h4>
 </br>
 
 <p align= "center">
@@ -49,30 +49,50 @@
 
 # 3. 회로도
 
-<img width="471" alt="2021-07-18 22;59;03" src="https://user-images.githubusercontent.com/86474141/126070102-5cddf993-82ab-41b4-a8d0-9e4b2ae5b4e1.PNG">
+- ## 회로도 구상
+<p align= "center">
+<img width=450 height=300 src="https://user-images.githubusercontent.com/86474141/126897813-1ae3a291-f495-41cb-ab88-cad2370c5893.PNG"></p>
+</br>
 
-<img width="537" alt="회로도" src="https://user-images.githubusercontent.com/86474141/126897813-1ae3a291-f495-41cb-ab88-cad2370c5893.PNG">
+- ## 실제 연결 모습
+<p align= "center">
+<img width=450 height=300 src="https://user-images.githubusercontent.com/86474141/126070102-5cddf993-82ab-41b4-a8d0-9e4b2ae5b4e1.PNG"></p>
+</br>
 
-적외선 센서 <-> 적외선 송신기 : 적외선 통신
+-
+  - Arduino UNO Board <-> OLED : SPI 통신
+  - IR Sensor <-> IR Remote Control : 적외선 통신
+<br><br>
 
-UNO 보드 R3 <-> Oled : SPI 통신
+------------------------------------------
 
-u8glib 라이브러리를 사용하여 Oled에 그림
+# 4. 게임 설명
 
+- 좌, 우 양 옆에서 몬스터들이 출현한다.
+- 리모컨 (적외선 송신기) 으로 상, 하, 좌, 우 키를 누름으로써 캐릭터를 움직이고 장애물을 피할 수 있다.
+  - 2키 : 상
+  - 8키 : 하
+  - 4키 : 좌
+  - 6키 : 우
+  - 5키 : ok
+- ok 키를 누르면 총알이 나가고 몬스터를 제거할 수 있다.
+- 총알은 연속으로 최대 4개 발사 가능하다. (개수 제한 없음)
+- 게임 종료 시 버틴 시간 기록이 나온다. (몬스터 킬 수 * 1) 초가 버틴 기록에 추가된다.
+- 게임 순위는 `scores 메뉴` 에서 확인 가능하다. 1 ~ 6위 기록들만 나타난다.
+- `option 메뉴` 에서는 게임 난이도 설정과 게임 기록 리셋이 가능하다.
+- 게임 난이도를 올릴수록 몬스터 출현 속도가 빨라진다.
+<br><br>
 
-### 게임 플레이 영상
+------------------------------------------
 
-![ezgif com-gif-maker](https://user-images.githubusercontent.com/86474141/126072594-909f29d7-0fe1-4cb9-9153-c00f8f63c711.gif)
+# 5. 게임 플레이 영상
 
+<p align= "center">
+<img width=450 height=250 src=https://user-images.githubusercontent.com/86474141/126072594-909f29d7-0fe1-4cb9-9153-c00f8f63c711.gif> </p>
+<br><br>
 
-### 조작 방법
-- 좌 우 양 옆에서 장애물들이 출현합니다.
-- 리모컨 (적외선 송신기) 으로 상, 하, 좌, 우 키를 누름으로써 캐릭터를 움직이고 장애물을 피합니다.
-- 4키 : 좌, 6키 : 우, 2키 : 상, 8키 : 하, 5키 : ok!
-- ok키를 누르면 총알이 나가고 장애물을 제거할 수 있습니다.
-- 총알은 연속으로 최대 4개 발사 가능합니다. (개수 제한 없음)
-- 게임 종료 시 버틴 기록이 나옵니다. (장애물 킬 수 * 1) 초가 버틴 기록에 추가됩니다.
-- 기록이 1 ~ 6 위 사이에 해당하면 EEPROM에 저장됩니다.
-- 게임 순위는 'scores' 옵션에서 확인 가능합니다.
-- 'option' 옵션에서는 게임 난이도 설정과 게임 기록 리셋이 가능합니다.
-- 게임 난이도를 올릴수록 게임 플레이 속도가 빨라집니다.
+------------------------------------------
+
+# 6. 참고 사이트
+
+#### 📙 https://tony100.tistory.com/entry/%EC%B5%9C%EA%B3%A0%EC%9D%98-%EB%94%94%EC%8A%A4%ED%94%8C%EB%A0%88%EC%9D%B4%EC%9A%A9-%EB%9D%BC%EC%9D%B4%EB%B8%8C%EB%9F%AC%EB%A6%AC-u8glib
