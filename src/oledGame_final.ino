@@ -21,6 +21,8 @@ int rcvCtrl;
 
 // 몬스터의 총 개수는 22개 이다.
 // timelimit[0 ~ 10] 은 우측 몬스터의 ... 정보이고, timelimit[11 ~ 21] 은 좌측 몬스터의 ... 정보
+// timeRandom[22] 은 모든 몬스터들의 속도와 관련된 시간 정보를 가지고 있다.
+// 시간 값이 작다는 것은 몬스터 존재 시간이 짧다는 것이다. 즉, 그만큼 몬스터의 속도가 빠르다는 것이다.
 unsigned long timeLimit[22];
 int timeRandom[22];
 
@@ -69,10 +71,10 @@ char *menuStr[3] = {"STRAT", "OPTION", "SCORES"}; // 메뉴 화면에서 나타�
 char *optionStr[3] = {"LEVEL", "SCORES RESET", "Back To Menu"}; // 옵션 화면에서 나타나는 문자열
 char *scoresResetS[4] = {"Do You Want", "Scores Reset?", "YES", "NO"}; // 리셋 화면에서 나타나는 문자열
 
-int menuCur = 0; // 현재 메뉴 커서 위치 정보를 가진다.
-int optionCur = 0; // 현재 옵션 커서 위치 정보를 가진다.
-int resetCur = 2;
-int level = 1; // 현재 게임 난이도 정보를 가진다.
+int menuCur = 0; // 현재 메뉴 커서 위치 정보를 가진다. (0 ~ 2 사이의 값)
+int optionCur = 0; // 현재 옵션 커서 위치 정보를 가진다. (0 ~ 2 사이의 값)
+int resetCur = 2; // 현재 리셋 화면의 커서 위치 정보를 가진다. (2 ~ 3 사이의 값, YES 또는 NO)
+int level = 1; // 현재 게임 난이도 정보를 가진다. (1 ~ 4 사이의 값)
 
 // 현재 어떤 화면을 보여주고 있는지를 나타내는 flag들 이다.
 // ex) reset_state == 1 이면, 현재 리셋 화면을 나타내고 있는 중인 것이다.
@@ -514,6 +516,9 @@ void menu () {
        
    // 가장 긴 문자열에 맞춰서 프레임 가로 너비를 정한다.
    u8g.drawFrame(d1-8, 1.5*h + 1, u8g.getStrWidth(menuStr[1]) + 16, 3*h);
+       
+    // 사용자가 현재 가리키고 있는 커서는 하얀 바탕에 검정 글씨로 표현하고, 그 외에는 검정 바탕에 하얀 글씨로 표현한다.
+    // menuCur 변수는 0 ~ 2 사이의 값을 가진다.
     if (menuCur == i) {
       u8g.drawBox(d1-8, (i+1.5)*h + 1, u8g.getStrWidth(menuStr[1]) + 16, h);
       u8g.setDefaultBackgroundColor();
@@ -522,10 +527,12 @@ void menu () {
   }
 }
 
-void option() { // Options menu screen
+// OLED 화면에 옵션 화면을 그리는 함수이다. (옵션 화면)
+void option() {
   upper();
   
   u8g.setFont(u8g_font_unifont);
+     
   int w, w0, w1;
   int h = u8g.getFontAscent() - (u8g.getFontDescent() - 1);
   int d;
@@ -544,6 +551,8 @@ void option() { // Options menu screen
    u8g.drawStr(w1 + 12, 3*h, "[]");
    
    
+    // 사용자가 현재 가리키고 있는 커서는 하얀 바탕에 검정 글씨로 표현하고, 그 외에는 검정 바탕에 하얀 글씨로 표현한다.
+    // optionCur 변수는 0 ~ 2 사이의 값을 가진다.
     if (optionCur == i) {
       if (i == 2) {
         u8g.drawBox(d-5, u8g.getHeight() - h, w + 10, h);
@@ -553,23 +562,23 @@ void option() { // Options menu screen
           u8g.setDefaultBackgroundColor();
       }
     } 
-
     if (i == 2) {
       u8g.drawStr(d, u8g.getHeight() - 1, optionStr[i]);
     } else {
         u8g.drawStr(5, (i+2)*h, optionStr[i]);
     }
-    
   }
 }
 
-void scores() { // Score menu screen
+// OLED 화면에 점수 순위 화면을 그리는 함수이다. (점수 순위 화면)
+void scores() { 
   u8g.setDefaultForegroundColor();
   u8g.setFont(u8g_font_04b_03);
  
   int w = u8g.getWidth();
   int h = u8g.getFontAscent() - (u8g.getFontDescent() - 1);
   
+  // 왼쪽 상단에 기지국 이미지를 표현하였다. (꾸미기 용도)
   for (int i=0; i<4; i++) {
     if(i == 3) {
       u8g.drawFrame(12, 0, 3, 6);
@@ -578,6 +587,7 @@ void scores() { // Score menu screen
     u8g.drawBox((i*4), 3-i, 3, i+3);
   }
 
+  // 오른쪽 상단에 배터리 이미지를 표현하였다. (꾸미기 용도)
   u8g.drawStr(w-u8g.getStrWidth("85%")-15, h-1, "85%");
   u8g.drawFrame(w-13, 2, 13, h-2);
   u8g.drawBox(w-13, 2, 8, h-2);
@@ -597,10 +607,18 @@ void scores() { // Score menu screen
 
   for (int i=0; i<score_num; i++) {
 
+    // 왼쪽에 1. ~ 6. 까지 표시한다.
     u8g.setPrintPos(3, (h-1)*(i+2));
     u8g.print(String(i+1) + ".");
+       
     u8g.setPrintPos(w - u8g.getStrWidth("00:00"), (h-1)*(i+2));
 
+    // EEPROM의 0 ~ 5 번지, 10 ~ 15 번지 에는 1 ~ 6 순위 기록자들의 시간 정보가 존재한다.
+    // 1순위의 minute 정보는 0 번지에 존재하고, second 정보는 10번지에 존재한다.
+    // 2순위의 minute 정보는 1 번지에 존재하고, second 정보는 11번지에 존재한다.
+    // ...
+    // 각 번지마다 1 Byte 씩 밖에 저장하지 못하기 때문에 시간 기록을 second 단위로 통째로 저장하기에는 범위의 한계가 있을 수 있다.
+    // 따라서 second 정보와 minute 정보를 따로 나누어 저장하였다.
     if (EEPROM.read(i) > 9) {
       if (EEPROM.read(i+10) > 9) {
         u8g.print(String(EEPROM.read(i)) + ":" + String(EEPROM.read(i+10)));
@@ -617,12 +635,16 @@ void scores() { // Score menu screen
   }
 }
 
-void scoresReset () { // option -> Score reset screen
+// OLED 화면에 옵션 -> 점수 리셋 화면을 그리는 함수이다. (점수 리셋 화면)
+void scoresReset () {
   u8g.setFont(u8g_font_unifont);
+     
   int w;
   int h = u8g.getFontAscent() - (u8g.getFontDescent() - 1);
   int d;
 
+  // 사용자가 현재 가리키고 있는 커서는 하얀 바탕에 검정 글씨로 표현하고, 그 외에는 검정 바탕에 하얀 글씨로 표현한다.
+  // resetCur 변수는 2 ~ 3 사이의 값을 가진다.
   for (int i=0; i<4; i++) {
     w = u8g.getStrWidth(scoresResetS[i]);
     d = (u8g.getWidth() - w) / 2;
@@ -636,8 +658,10 @@ void scoresReset () { // option -> Score reset screen
   }
 }
 
-
-void reset() { // Initialize the game execution environment
+// 게임 환경을 셋팅하는 함수이다.
+void reset() {
+   
+  // 게임 난이도에 따라 몬스터 출현 속도 지정
   switch (level) {
     case 1 :
       timeLevel = 75;
@@ -653,6 +677,7 @@ void reset() { // Initialize the game execution environment
       break;
   }
   
+  // 몬스터들의 x 위치는 출발선상으로 위치시키고, y 위치는 무작위로 지정한다.
   for(int a=0; a<Length / 2; a++) {
     yspaR[a] = random(u8g.getHeight() - 12) + 1;
     xspaR[a] = u8g.getWidth();
@@ -660,22 +685,28 @@ void reset() { // Initialize the game execution environment
     xspaL[a] = -8;
   }
 
+  // 몬스터들의 속도와 관련된 시간 정보를 초기화 한다.
   for(int a=0; a<Length; a++) {
     timeRandom[a] = random(timeLevel, timeLevel+30);
   }
 
+  // 캐릭터의 위치를 초기화 시킨다.
   yCtrl = u8g.getHeight() / 2;
   xCtrl = u8g.getWidth() / 2;
 
   rcvCtrl = 999;
 
+  // 총알들을 초기화 시킨다.
   for (int i=0; i<attack_size; i++) {
     attack_seek[i] = 0;
   }
+     
+  // 킬 수를 초기화 시킨다.
   obs_kill = 0;
 }
 
-void lineUp_eep() { // Scores are stored in EEPROM in record order
+// 현재 EEPROM 0 ~ 5 번지, 10 ~ 15 번지에 있는 기록들을 1 ~ 6 순위로 정렬하는 함수이다.
+void lineUp_eep() {
   for (int i=0; i<score_num; i++) {
     total_score_arr[i] = (EEPROM.read(i) * 60) + EEPROM.read(i+10);
   }
@@ -704,7 +735,9 @@ void swap_eep(int a, int b) {
   total_score_arr[b] = temp;
 }
 
-void score_eep() { // Save latest records to EEPROM
+// 가장 최근에 생성된 버틴 시간 기록을 EEPROM에 기록할 지 말지 결정하는 함수이다.
+// 현재 6 순위 기록과 비교하여 더욱 우수한 기록이면 순위를 교체한다.
+void score_eep() {
   int compare_score = (EEPROM.read(5) * 60) + EEPROM.read(15);
   if (time_totalScore > compare_score) {
       EEPROM.write(5, time_totalScore / 60);
@@ -713,6 +746,7 @@ void score_eep() { // Save latest records to EEPROM
   }
 }
 
+// 1 ~ 6 순위 기록을 초기화 하는 함수이다.
 void reset_eep() {
   for (int i=0; i<score_num; i++) {
     EEPROM.write(i, 0);
