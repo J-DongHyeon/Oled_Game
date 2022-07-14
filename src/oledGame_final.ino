@@ -53,10 +53,16 @@ int attack_xspa[4]; // 총알의 x좌표
 int attack_yspa[4]; // 총알의 y좌표
 
 // 총알은 최대 4개 까지만 연속 발사할 수 있다.
-// attack_seek 배열은 각 총알이 현재 발사된 상태인지 아닌지에 대한 정보를 가진다.
+// attack_seek 배열은 각 총알이 현재 발사된 상태인지 아닌지, 오른쪽 방향으로 발사 됬는지 왼쪽 방향으로 발사 됬는지의 정보를 가지고 있다.
+// 0이면 발사되지 않은 것, 1이면 오른쪽 방향, 2이면 왼쪽 방향으로 발사된 것이다.
 int attack_seek[4];
+
 int attack_size = sizeof(attack_seek)/sizeof(attack_seek[0]);
+
+// 현재 몇 번째 총알이 발사됬는지에 대한 정보를 가진다.
+// 0 ~ 3 사이의 값을 가질 것이다.
 int attack_idx = -1;
+
 int obs_kill = 0; // 몬스터 킬 수를 의미한다.
 
 char *menuStr[3] = {"STRAT", "OPTION", "SCORES"}; // 메뉴 화면에서 나타나는 문자열
@@ -76,13 +82,15 @@ int reset_state = 0; // 리셋 화면 flag
 int scores_state = 0; // 점수 화면 flag
 
 // timeM_score 는 게임 실행 시, (게임을 킨 순간 ~ 게임 실행 직전) 까지의 시간 정보를 담는다. 이 정보를 이용하여 게임 버틴 시간을 구한다.
+// time_score 는 게임 버틴 시간을 second 단위로 저장한다.
+// time_totalScore 는 게임 버틴 시간에 (몬스터 킬 수 * 1) second 까지 더한 최종 값을 저장한다.
 unsigned long timeM_score, time_score, time_totalScore;
 
 int score_num = 6; // 점수 화면에 나타낼 기록 개수이다. 상위 6개 기록만 나타낼 것이다.
 unsigned long total_score_arr[6]; // 6개 점수 기록을 담을 배열
 
-//
-//
+// inGame_sec 은 게임 실행 화면에서 나타나는 second 시간 정보를 가진다.
+// inGame_sec_limit 은 1 second 단위로 inGame_sec 을 증가시키기 위한 변수이다.
 // inGame_mil 은 게임 실행 화면에서 나타나는 milli second 시간 정보를 가진다. 10 milli second 단위이다.
 // inGame_mil_limit 은 10 milli second 단위로 inGame_mil 을 증가시키기 위한 변수이다.
 unsigned long inGame_sec = 0;
@@ -90,7 +98,8 @@ unsigned long inGame_sec_limit = 0;
 unsigned long inGame_mil = 0;
 unsigned long inGame_mil_limit = 0;
 
-int avoid_drt = 1; // 캐릭터의 현재 방향을 의미한다. 1이면 ... , 0이면 ... 이다.
+// 캐릭터의 현재 방향을 의미한다. 1이면 캐릭터가 오른쪽을 보고 있는 것이고, 2이면 왼쪽을 보고 있는 것이다.
+int avoid_drt = 1;
 
 // 메뉴 화면에서 왼쪽 캐릭터의 HEX Array 이다.
 // 그림판으로 흑백 캐릭터를 그린 후, LCD Assistant 프로그램을 이용하여 비트맵 이미지를 HEX Array 타입으로 반환하였다.
@@ -195,27 +204,29 @@ const unsigned char kill_draw [] PROGMEM = {
 0x00, 0xA5, 0x42, 0xA5, 0x00, 0x7E, 0x42, 0x7E, 
 };
 
-// 게임 실행 시 OLED 화면에 그리는 함수이다.
+// 게임 실행 시 OLED 화면에 그리는 함수이다. (게임 실행 화면)
 void draw() { 
      u8g.setFont(u8g_font_04b_03);
      
      // 게임 버틴 시간을 나타내기 위한 위치
      u8g.setPrintPos(u8g.getWidth() - u8g.getStrWidth("0000:00"), u8g.getHeight());
 
-     // 
+     // 게임 실행 직 후 millis() - timeM_score 는 0 이다. 10 milli second 마다 이 if문은 참이 된다.
      if ((millis() - timeM_score) - inGame_mil_limit > 10) {
       inGame_mil_limit = millis() - timeM_score;
-      inGame_mil++;
+      inGame_mil++; // 10 milli second 마다 inGame_mil 이 1씩 증가한다.
       if (inGame_mil == 100) {
         inGame_mil = 0;
       }
      }
      
+     // 게임 실행 직 후 millis() - timeM_score 는 0 이다. 1 second 마다 이 if문은 참이 된다.
      if ((millis() - timeM_score) - inGame_sec_limit > 1000) {
       inGame_sec_limit = millis() - timeM_score;
-      inGame_sec++;
+      inGame_sec++; // 1 second 마다 inGame_sec 이 1씩 증가한다.
      }
 
+     // 오른쪽 아래에 게임 버틴 시간 기록을 나타낸다.
      if (inGame_sec < 10) {
       u8g.print("000" + String(inGame_sec) + ":" + String(inGame_mil));
      } else if (inGame_sec < 100) {
@@ -224,7 +235,10 @@ void draw() {
       u8g.print("0" + String(inGame_sec) + ":" + String(inGame_mil));
      }
 
+     // 왼쪽 아래에 가로 8픽셀, 세로 8픽셀 해골 모양을 그린다.
      u8g.drawBitmapP(5, u8g.getHeight() - 8, 1, 8, kill_draw);
+     
+     // 해골 모양 옆에 킬 수를 나타낸다.
      u8g.setPrintPos(15, u8g.getHeight());
      if (obs_kill < 10) {
       u8g.print("0x0" + String(obs_kill));
@@ -232,36 +246,51 @@ void draw() {
       u8g.print("0x" + String(obs_kill));
      }
      
-     
-  
      u8g.setFont(u8g_font_unifont);
+     
+     // 캐릭터와 몬스터들이 움직이는 영역을 프레임으로 그린다.
      u8g.drawFrame(0, 0, u8g.getWidth(), u8g.getHeight() - 8);
 
+     // avoid_drt == 1 인 경우 캐릭터가 오른쪽을 보고있는 경우이다. 8 X 8 픽셀 크기로 오른쪽을 보고 있는 캐릭터를 그린다.
      if (avoid_drt == 1) {
       u8g.drawBitmapP(xCtrl, yCtrl, 1, 8, avoidR);
+          
+     // avoid_drt == 2 인 경우 캐릭터가 왼쪽을 보고있는 경우이다. 8 X 8 픽셀 크기로 왼쪽을 보고 있는 캐릭터를 그린다.     
      } else if (avoid_drt == 2) {
       u8g.drawBitmapP(xCtrl, yCtrl, 1, 8, avoidL);
      }
      
      for (int i=0; i<Length / 2; i++) {
+          
+     // 오른쪽에서 나오는 총 11개의 몬스터들의 각 위치에 맞게 3 X 8 픽셀 크기로 몬스터들을 그린다.
      u8g.drawBitmapP(xspaR[i], yspaR[i], 1, 3, obs1);
+          
+     // 왼쪽에서 나오는 총 11개의 몬스터들의 각 위치에 맞게 3 X 8 픽셀 크기로 몬스터들을 그린다.
      u8g.drawBitmapP(xspaL[i], yspaL[i], 1, 3, obs2);
     }
 
+    // 캐릭터의 총알들의 위치를 최신화 하는 함수이다.
     attack_draw();
 
+    // 각 총알의 위치에 맞게 1 X 8 픽셀 크기로 총알을 그린다.
     for (int i=0; i<attack_size; i++) {
     u8g.drawBitmapP(attack_xspa[i], attack_yspa[i], 1, 1, attack_obs);
     }
     
   }
 
-void end_draw() { // end game screen
+// 게임 종료 시 OLED 화면에 그리는 함수이다. (게임 종료 화면)
+void end_draw() {
   u8g.setFont(u8g_font_unifont);
   int h = u8g.getFontAscent() - u8g.getFontDescent();
+     
+  // minu 는 최종 기록의 minute 단위 정보를 저장한다.
+  // sec 는 최종 기록의 second 단위 정보를 저장한다.
   int minu = time_totalScore / 60, sec = time_totalScore % 60;
 
+  // 최종 기록 겉에 표시되는 프레임이다.
   u8g.drawFrame(15, 2*(h+1) - (h/2) - 2, 95, 2*h + 3);
+     
   u8g.setPrintPos((u8g.getWidth() - u8g.getStrWidth("Game Over"))/2, h);
   u8g.print("Game Over");
   u8g.drawBitmapP(25, 2*(h+1) - (h/2), 1, 8, kill_draw);
@@ -284,22 +313,23 @@ void end_draw() { // end game screen
       u8g.print("0" + String(minu) + ":0" + String(sec));
     }
   }
-  
 }
 
-void attack() { // create attack bullets
+// 캐릭터의 총알을 생성하는 함수이다.
+void attack() {
+     
+  // 현재 발사 되어 있는 총알의 개수 정보를 가진다.
   int attack_num = 0;
   
-  for (int i=0; i<attack_size; i++) {
-    if (attack_seek[i] != 0) {
-      attack_num++;
-    }
+  for (int i=0; i<attack_size; i++)
+  {
+    if (attack_seek[i] != 0) attack_num++;
   }
 
-  if (attack_num == 4) {
-    return;
-  }
+  // 현재 발사 되어 있는 총알의 개수가 4개이면 총알을 생성하지 않는다.
+  if (attack_num == 4) return;
   
+  // 현재 발사되는 총알의 idx를 최신화 한다. 0 ~ 3 사이의 값만 가진다.
   attack_idx++;
   attack_idx &= 0x03;
 
@@ -315,22 +345,27 @@ void attack() { // create attack bullets
     attack_xspa[attack_idx] = 0;
     attack_yspa[attack_idx] = 0;
   }
-  
-  
 }
 
-void attack_draw() { // handling for the bullet movement
+// 캐릭터의 총알들의 위치를 최신화 하는 함수이다.
+void attack_draw() {
   for (int i=0; i<attack_size; i++) {
+    
+    // attack_seek[i] == 1 이면 총알이 오른쪽 방향으로 발사된 것이다. 따라서 총알의 x좌표는 증가한다.
     if (attack_seek[i] == 1) {
       attack_xspa[i]++;
       if (attack_xspa[i] == u8g.getWidth()) {
         attack_seek[i] = 0;
       }
+         
+    // attack_seek[i] == 2 이면 총알이 왼쪽 방향으로 발사된 것이다. 따라서 총알의 x좌표는 감소한다.
     } else if (attack_seek[i] == 2) {
       attack_xspa[i]--;
       if (attack_xspa[i] == -8) {
         attack_seek[i] = 0;
       }
+    
+    // attack_seek[i] == 0 이면 총알이 발사되지 않은 것이다.
     } else {
       attack_xspa[i] = 0;
       attack_yspa[i] = 0;
@@ -345,7 +380,7 @@ void swap(int x, int y) {
   timeRandom[y] = temp;
 }
 
-void lineUp(int timeRand[]) { // obstacle alignment
+void lineUp(int timeRand[]) {
   int x;
   for(int a=0; a<Length - 1; a++) {
     x=a;
@@ -366,25 +401,30 @@ void Switch () {
   }
 }
 
-void loading() { // loading screen
-  
+// 처음 게임을 켰을 때 OLED 화면에 로딩 상태를 그리는 함수이다. (로딩 중 화면)
+void loading() { 
   u8g.setFont(u8g_font_unifont);
+     
   int w = u8g.getWidth();
   int d = (w - u8g.getStrWidth("Obstacles Game")) / 2;
   int h = u8g.getFontAscent() - u8g.getFontDescent();
+     
+  // "Obstacles Game" 이라는 문자열을 3개 중첩하여 나타냄으로써 약간 입체감을 표현하였다.
   u8g.drawStr(d, h, "Obstacles Game");
   u8g.drawStr(d+1, h+1, "Obstacles Game");
   u8g.drawStr(d+1, h, "Obstacles Game");
 
+  // 로딩 게이지가 점점 차는 것을, 프레임을 박스가 점점 덮어가는 것으로 표현하였다.
+  // load_gage 변수가 0 ~ 100 정도까지 점점 증가하면서 박스가 프레임을 덮는다.
   u8g.drawFrame(14, u8g.getHeight()-h-1, w-28, h/2);
   u8g.drawBox(14, u8g.getHeight()-h-1, load_gage, h/2);
   
   u8g.setFont(u8g_font_04b_03);
   u8g.drawStr(w-u8g.getStrWidth("Ver 1.0"), u8g.getHeight()-1, "Ver 1.0");
   u8g.drawStr((w-u8g.getStrWidth("loading..."))/2, u8g.getHeight()-2, "loading...");
-
-
   
+  // load_sct 변수는 0, 1, 2, 3, 0, 1, 2 ... 값을 반복적으로 가질 것이다.
+  // 이 값에 따라서 로딩 중 캐릭터가 뛰어 가는 듯한 애니메이션을 표현하였다.
   switch(load_sct) {
     case 0 :
       u8g.drawBitmapP(40, 13, 4, 41, loading1);
@@ -401,12 +441,15 @@ void loading() { // loading screen
   }
 }
 
-void upper() { // top of the main screen
+// 메뉴 화면의 상단 부분을 그리는 함수이다. (총 게임 플레이 시간, 배터리 표시 등등)
+void upper() {
   u8g.setDefaultForegroundColor();
   u8g.setFont(u8g_font_04b_03);
+     
   int w = u8g.getWidth();
   int h = u8g.getFontAscent() - (u8g.getFontDescent() - 1);
 
+  // 왼쪽 상단에 기지국 이미지를 표현하였다. (꾸미기 용도)
   for (int i=0; i<4; i++) {
     if(i == 3) {
       u8g.drawFrame(12, 0, 3, 6);
@@ -417,7 +460,6 @@ void upper() { // top of the main screen
 
   u8g.drawStr((w-u8g.getStrWidth("Play Time"))/2, h-1, "Play Time");
   
-  
   play_time_sec = millis() / 1000 - (play_time_min * 60);
   
   if(play_time_sec >= 60) {
@@ -425,6 +467,7 @@ void upper() { // top of the main screen
     play_time_sec = millis() / 1000 - (play_time_min * 60);
   }
   
+  // 가운데 상단에 총 게임 플레이 시간을 표현하였다.
   u8g.setPrintPos((w-u8g.getStrWidth("00:00"))/2, 2*h-1);
   if (play_time_min < 10) {
     if (play_time_sec < 10) {
@@ -440,20 +483,21 @@ void upper() { // top of the main screen
     }
   }
 
+  // 오른쪽 상단에 배터리 이미지를 표현하였다. (꾸미기 용도)
   u8g.drawStr(w-u8g.getStrWidth("85%")-15, h-1, "85%");
   u8g.drawFrame(w-13, 2, 13, h-2);
   u8g.drawBox(w-13, 2, 8, h-2);
-  
-  
 }
 
-void menu () {// main screen
+// OLED 화면에 메뉴 화면을 그리는 함수이다. (메뉴 화면)
+void menu () {
   upper();
   
   int w = u8g.getWidth();
   int d;
   int d1;
   
+  // 메뉴 화면 왼쪽에는 캐릭터 이미지를, 오른쪽에는 해골 이미지를 나타내었다.
   u8g.drawBitmapP(-2, 20, 4, 41, bull);
   u8g.drawBitmapP(103, 20, 3, 32, brawl);
   
@@ -462,10 +506,13 @@ void menu () {// main screen
   u8g.setFont(u8g_font_unifont);
   int h = u8g.getFontAscent() - (u8g.getFontDescent() - 1);
 
+  // 큰 프레임을 그리고, 그 안에 "START", "OPTION", "SCORES" 문자열을 나타낼 것이다.
   for (int i=0; i<3; i++) {
    d = (w - u8g.getStrWidth(menuStr[i])) / 2;
    d1 = (w - u8g.getStrWidth(menuStr[1])) / 2;
    u8g.setDefaultForegroundColor();
+       
+   // 가장 긴 문자열에 맞춰서 프레임 가로 너비를 정한다.
    u8g.drawFrame(d1-8, 1.5*h + 1, u8g.getStrWidth(menuStr[1]) + 16, 3*h);
     if (menuCur == i) {
       u8g.drawBox(d1-8, (i+1.5)*h + 1, u8g.getStrWidth(menuStr[1]) + 16, h);
@@ -977,7 +1024,9 @@ void loop() {
       score_eep();
       inGame_sec = 0;
       inGame_mil = 0;
+      inGame_sec_limit = 0;
       inGame_mil_limit = 0;
+      
       
       while(true) {        
         u8g.firstPage();
