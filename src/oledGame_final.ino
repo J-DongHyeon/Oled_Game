@@ -5,12 +5,14 @@
 U8GLIB_SH1106_128X64 u8g(13, 11, 10, 9, 8);
 
 /*
+ * Arduino UNO Board 와 OLED는 SPI 통신
  * 13 : SCK
  * 11 : SDA
  * 9 : DC
  * 8 : RST
  */
 
+// IR Sensor는 14번 핀에 연결
 IRrecv irrecv(14);
 decode_results results;
 
@@ -18,13 +20,20 @@ unsigned long ifrRcv;
 int rcvCtrl;
 
 // 몬스터의 총 개수는 22개 이다.
+// timelimit[0 ~ 10] 은 우측 몬스터의 ... 정보이고, timelimit[11 ~ 21] 은 좌측 몬스터의 ... 정보
 unsigned long timeLimit[22];
 int timeRandom[22];
 
+// 메뉴 화면에 나타나는 총 게임 플레이 시간이다.
 int play_time_sec;
 int play_time_min = 0;
 
+// 게임 처음 실행 후 로딩 화면에서 게임 캐릭터가 달려가는 모습을 애니메이션 처럼 효과를 내었다.
+// load_sct 가 0 ~ 3 까지 반복적으로 돌면서 4개의 캐릭터 모습을 반복적으로 보여준다. 그렇게 함으로써 캐릭터가 달려가는 모습을 애니메이션 처럼 보여준다.
 char load_sct = 0;
+
+// 로딩 화면에서 게이지가 0 ~ 100 % 까지 차는 것을 표현하였다.
+// load_gage 가 0 ~ 100 정도 까지 증가하고 그에 맞춰 게이지가 차 오른다.
 char load_gage = 0;
 
 int yspaR[11]; // 오른쪽에서 나오는 몬스터의 y좌표 정보
@@ -32,6 +41,9 @@ int xspaR[11]; // 오른쪽에서 나오는 몬스터의 x좌표 정보
 int yspaL[11]; // 왼쪽에서 나오는 몬스터의 y좌표 정보
 int xspaL[11]; // 왼쪽에서 나오는 몬스터의 x좌표 정보
 int Length = sizeof(timeRandom) / sizeof(timeRandom[0]);
+
+// 게임 난이도는 1 ~ 4 단계가 있다. 난이도가 높아질 수록 몬스터 출현 속도가 빨라진다.
+// timeLevel을 낮출수록 몬스터의 출현 속도가 빨라진다.
 int timeLevel;
 
 int yCtrl = u8g.getHeight() / 2; // 캐릭터의 y좌표 정보
@@ -39,36 +51,50 @@ int xCtrl = u8g.getWidth() / 2; // 캐릭터의 x좌표 정보
 
 int attack_xspa[4]; // 총알의 x좌표
 int attack_yspa[4]; // 총알의 y좌표
-int attack_seek[4]; // 총알은 최대 4개 까지만 연속 발사할 수 있다.
+
+// 총알은 최대 4개 까지만 연속 발사할 수 있다.
+// attack_seek 배열은 각 총알이 현재 발사된 상태인지 아닌지에 대한 정보를 가진다.
+int attack_seek[4];
 int attack_size = sizeof(attack_seek)/sizeof(attack_seek[0]);
 int attack_idx = -1;
-int obs_kill = 0;
+int obs_kill = 0; // 몬스터 킬 수를 의미한다.
 
-char *menuStr[3] = {"STRAT", "OPTION", "SCORES"};
-char *optionStr[3] = {"LEVEL", "SCORES RESET", "Back To Menu"};
-char *scoresResetS[4] = {"Do You Want", "Scores Reset?", "YES", "NO"};
+char *menuStr[3] = {"STRAT", "OPTION", "SCORES"}; // 메뉴 화면에서 나타나는 문자열
+char *optionStr[3] = {"LEVEL", "SCORES RESET", "Back To Menu"}; // 옵션 화면에서 나타나는 문자열
+char *scoresResetS[4] = {"Do You Want", "Scores Reset?", "YES", "NO"}; // 리셋 화면에서 나타나는 문자열
 
-int menuCur = 0;
-int optionCur = 0;
+int menuCur = 0; // 현재 메뉴 커서 위치 정보를 가진다.
+int optionCur = 0; // 현재 옵션 커서 위치 정보를 가진다.
 int resetCur = 2;
-int level = 1;
+int level = 1; // 현재 게임 난이도 정보를 가진다.
 
-int menu_state = 1;
-int option_state = 0;
-int reset_state = 0;
-int scores_state = 0;
+// 현재 어떤 화면을 보여주고 있는지를 나타내는 flag들 이다.
+// ex) reset_state == 1 이면, 현재 리셋 화면을 나타내고 있는 중인 것이다.
+int menu_state = 1; // 메뉴 화면 flag
+int option_state = 0; // 옵션 화면 flag
+int reset_state = 0; // 리셋 화면 flag
+int scores_state = 0; // 점수 화면 flag
 
+// timeM_score 는 게임 실행 시, (게임을 킨 순간 ~ 게임 실행 직전) 까지의 시간 정보를 담는다. 이 정보를 이용하여 게임 버틴 시간을 구한다.
 unsigned long timeM_score, time_score, time_totalScore;
-int score_num = 6;
-unsigned long total_score_arr[6];
+
+int score_num = 6; // 점수 화면에 나타낼 기록 개수이다. 상위 6개 기록만 나타낼 것이다.
+unsigned long total_score_arr[6]; // 6개 점수 기록을 담을 배열
+
+//
+//
+// inGame_mil 은 게임 실행 화면에서 나타나는 milli second 시간 정보를 가진다. 10 milli second 단위이다.
+// inGame_mil_limit 은 10 milli second 단위로 inGame_mil 을 증가시키기 위한 변수이다.
 unsigned long inGame_sec = 0;
 unsigned long inGame_sec_limit = 0;
 unsigned long inGame_mil = 0;
 unsigned long inGame_mil_limit = 0;
 
-int avoid_drt = 1;
+int avoid_drt = 1; // 캐릭터의 현재 방향을 의미한다. 1이면 ... , 0이면 ... 이다.
 
-
+// 메뉴 화면에서 왼쪽 캐릭터의 HEX Array 이다.
+// 그림판으로 흑백 캐릭터를 그린 후, LCD Assistant 프로그램을 이용하여 비트맵 이미지를 HEX Array 타입으로 반환하였다.
+// 사이즈가 크기 때문에 PROGMEM 키워드를 사용하여 SRAM이 아니라 Flash Memory에 저장하였다.
 const unsigned char bull[] PROGMEM = {
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFC, 0x00, 0x00, 0x03, 0xFE, 0x00, 0x00, 0x03, 0xFE, 0x00,
 0x00, 0x07, 0xFF, 0x00, 0x00, 0x07, 0xFF, 0x00, 0x00, 0x07, 0xFF, 0x00, 0x00, 0x07, 0xFE, 0x00,
@@ -83,6 +109,7 @@ const unsigned char bull[] PROGMEM = {
 0x00, 0x00, 0x00, 0x00, 
 };
 
+// 메뉴 화면에서 오른쪽 캐릭터의 HEX Array 이다.
 const unsigned char brawl[] PROGMEM = {
 0x00, 0x3C, 0x00, 0x00, 0xFF, 0x80, 0x03, 0xFF, 0xC0, 0x07, 0xC3, 0xE0, 0x0F, 0x00, 0xF0, 0x1E,
 0x00, 0x78, 0x1C, 0x00, 0x38, 0x38, 0x00, 0x1C, 0x70, 0x00, 0x0C, 0x70, 0x00, 0x0E, 0x60, 0xC0,
@@ -92,6 +119,8 @@ const unsigned char brawl[] PROGMEM = {
 0xF0, 0x0F, 0xE3, 0xE0, 0x07, 0xFF, 0xC0, 0x01, 0xFF, 0x80, 0x00, 0xFE, 0x00, 0x00, 0x00, 0x00
 };
 
+
+// 로딩 화면에서 뛰어가는 캐릭터의 첫 번째 포즈이다.
 const unsigned char loading1[] PROGMEM = {
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x00,
 0x00, 0x01, 0xFC, 0x00, 0x00, 0x03, 0xFC, 0x00, 0x00, 0x03, 0xBE, 0x00, 0x00, 0x03, 0xFE, 0x00,
@@ -106,6 +135,7 @@ const unsigned char loading1[] PROGMEM = {
 0x00, 0x00, 0x00, 0x00, 
 };
 
+// 로딩 화면에서 뛰어가는 캐릭터의 두 번째 포즈이다.
 const unsigned char loading2[] PROGMEM = {
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFC, 0x00,
 0x00, 0x01, 0xFE, 0x00, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x03, 0xFF, 0x00, 0x00, 0x07, 0xFF, 0x80,
@@ -120,6 +150,7 @@ const unsigned char loading2[] PROGMEM = {
 0x00, 0x00, 0x00, 0x00, 
 };
 
+// 로딩 화면에서 뛰어가는 캐릭터의 세 번째 포즈이다.
 const unsigned char loading3[] PROGMEM = {
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFC, 0x00, 0x00, 0x01, 0xFF, 0x00,
 0x00, 0x01, 0xFF, 0x00, 0x00, 0x03, 0xFF, 0x00, 0x00, 0x03, 0xFF, 0x80, 0x00, 0x07, 0xFF, 0x80,
@@ -134,34 +165,44 @@ const unsigned char loading3[] PROGMEM = {
 0x00, 0x00, 0x00, 0x00, 
 };
 
+// 게임 실행 화면에서 캐릭터가 오른쪽을 보고 있을 때의 HEX Array 이다.
 const unsigned char avoidR[] PROGMEM = {
 0xFF, 0x81, 0x99, 0x8D, 0x8D, 0x81, 0x81, 0xFF, 
 };
 
+// 게임 실행 화면에서 캐릭터가 왼쪽을 보고 있을 때의 HEX Array 이다.
 const unsigned char avoidL [] PROGMEM = {
 0xFF, 0x81, 0x99, 0xB1, 0xB1, 0x81, 0x81, 0xFF, 
 };
 
+// 게임 실행 화면에서 오른쪽에서 오는 몬스터의 HEX Array 이다.
 const unsigned char obs1 [] PROGMEM = {
 0xE0, 0x35, 0xE0, 
 };
 
+// 게임 실행 화면에서 왼쪽에서 오는 몬스터의 HEX Array 이다.
 const unsigned char obs2 [] PROGMEM = {
 0x07, 0xAC, 0x07, 
 };
 
+// 게임 실행 화면에서 총알의 HEX Array 이다.
 const unsigned char attack_obs [] PROGMEM = {
 0xFF,
 };
 
+// 게임 실행 화면에서 킬 수 옆에 그려진 해골 모양의 HEX Array 이다.
 const unsigned char kill_draw [] PROGMEM = {
 0x00, 0xA5, 0x42, 0xA5, 0x00, 0x7E, 0x42, 0x7E, 
 };
 
-void draw() { // screen while the game is running
+// 게임 실행 시 OLED 화면에 그리는 함수이다.
+void draw() { 
      u8g.setFont(u8g_font_04b_03);
+     
+     // 게임 버틴 시간을 나타내기 위한 위치
      u8g.setPrintPos(u8g.getWidth() - u8g.getStrWidth("0000:00"), u8g.getHeight());
 
+     // 
      if ((millis() - timeM_score) - inGame_mil_limit > 10) {
       inGame_mil_limit = millis() - timeM_score;
       inGame_mil++;
@@ -936,6 +977,7 @@ void loop() {
       score_eep();
       inGame_sec = 0;
       inGame_mil = 0;
+      inGame_mil_limit = 0;
       
       while(true) {        
         u8g.firstPage();
