@@ -20,11 +20,14 @@ unsigned long ifrRcv;
 int rcvCtrl;
 
 // 몬스터의 총 개수는 22개 이다.
-// timelimit[0 ~ 10] 은 우측 몬스터의 ... 정보이고, timelimit[11 ~ 21] 은 좌측 몬스터의 ... 정보
-// timeRandom[22] 은 모든 몬스터들의 속도와 관련된 시간 정보를 가지고 있다.
-// 시간 값이 작다는 것은 몬스터 존재 시간이 짧다는 것이다. 즉, 그만큼 몬스터의 속도가 빠르다는 것이다.
-unsigned long timeLimit[22];
+// timeRandom[22] 은 각 몬스터들이 움직이는 시간 간격 정보를 가지고 있다.
+// ex) timeRandom[0] 이 30 ms 라면, 0 번째 몬스터는 30ms 마다 움직이는 것이다.
+// timeRandom[0] 이 가장 빠른 몬스터의 시간 정보를 가지고, timeRandom[21] 이 가장 느린 몬스터의 시간 정보를 가진다.
+// 시간 값이 작다는 것은 그만큼 몬스터의 속도가 빠르다는 것이다.
+// timeLimit 은 각 몬스터의 timeRandom 값 마다 if문 조건을 만족시키기 위한 역할이다.
+// timeRandom[0 ~ 10], timeLimit[0 ~ 10] 은 오른쪽 몬스터, timeRandom[11 ~ 21], timeLimit[11 ~ 21] 은 왼쪽 몬스터들에 대한 정보이다.
 int timeRandom[22];
+unsigned long timeLimit[22];
 
 // 메뉴 화면에 나타나는 총 게임 플레이 시간이다.
 int play_time_sec;
@@ -382,6 +385,7 @@ void swap(int x, int y) {
   timeRandom[y] = temp;
 }
 
+// 인자 값으로 timeRandom[22] 값이 들어올 것이다. timeRandom[22] 를 오름차순으로 정렬하여 빠른 몬스터 순으로 정렬한다.
 void lineUp(int timeRand[]) {
   int x;
   for(int a=0; a<Length - 1; a++) {
@@ -395,6 +399,7 @@ void lineUp(int timeRand[]) {
   }
 }
 
+// 어떤 몬스터를 새로 생성하였을 때, 그 몬스터의 속도가 0 번째 몬스터 보다 빠르다면 값을 서로 교체해준다.
 void Switch () {
   for (int a=1; a<Length; a++) {
     if (timeRandom[0] > timeRandom[a]) {
@@ -755,12 +760,14 @@ void reset_eep() {
   }
 }
 
+// 처음에 1번 실행된다.
 void setup() {  
   irrecv.enableIRIn();
 
   reset();
   lineUp(timeRandom);
 
+  // 게임을 처음 키고 7초 동안은 로딩 화면을 OLED 화면에 나타낸다. (꾸미기 용도)
   while (millis() < 7000) {
     u8g.firstPage();
     do {
@@ -769,13 +776,18 @@ void setup() {
     load_sct++;
     load_sct = load_sct & 0x03;
 
+    // millis() 가 0 ~ 7000 까지 가면서 load_gaeg 는 0 ~ 100 정도 까지의 값을 가진다.
     load_gage = millis() / 68;
     delay(50);
   }
 }
- 
+
+// 무한 반복 된다.
 void loop() {
- while (menu_state) { // handling for the main screen
+ 
+ // 메뉴 화면 flag 가 1이면 아래 while 문이 반복 실행 된다.
+ // 메뉴 화면을 OLED 화면에 나타낸다.
+ while (menu_state) {
 
    reset();
    u8g.firstPage();
@@ -783,39 +795,40 @@ void loop() {
      menu();
    }while(u8g.nextPage());
    
+  // 적외선 리모컨으로부터 신호를 받은 경우
   if (irrecv.decode(&results)) {
     ifrRcv = results.value & 0xFF;
-    
     irrecv.resume();
 
-    
     switch (ifrRcv) {
-      case 0xE7 : // down button
+      case 0xE7 : // 위 버튼
         menuCur--;
         if (menuCur == -1) {
           menuCur = 2;
         }
       break;
-      case 0xB5 : // up button
+      case 0xB5 : // 아래 버튼
         menuCur++;
         if(menuCur == 3) {
           menuCur = 0;
         }
       break;
-      case 0xC7 : // ok button
-        if(menuCur == 0) {
+      case 0xC7 : // ok 버튼
+        if(menuCur == 0) { // 메뉴 커서가 0 일 때 ok 버튼을 누른 경우
           menu_state = 0;
-          timeM_score = millis();
-        } else if (menuCur == 1) {
+          timeM_score = millis(); // 게임 시작 전까지의 경과 시간을 timeM_score 변수에 담아둔다.
+        } else if (menuCur == 1) { // 메뉴 커서가 1 일 때 ok 버튼을 누른 경우
           option_state = 1;
-        } else if (menuCur == 2) {
+        } else if (menuCur == 2) { // 메뉴 커서가 2 일 때 ok 버튼을 누른 경우
           scores_state = 1;
         }
       break;
     }
   }
 
-  while(option_state) { // handling for the option screen
+  // 옵션 화면 flag 가 1이면 아래 while 문이 반복 실행 된다.
+  // 옵션 화면을 OLED 화면에 나타낸다.
+  while(option_state) {
     u8g.firstPage();
     do {
      option();
@@ -826,19 +839,19 @@ void loop() {
       irrecv.resume();
 
       switch(ifrRcv) {
-        case 0xE7 : // down button
+        case 0xE7 : // 위 버튼
           optionCur--;
           if (optionCur == -1) {
             optionCur = 2;
           }
           break;
-        case 0xB5 : // up button
+        case 0xB5 : // 아래 버튼
           optionCur++;
           if(optionCur == 3) {
             optionCur = 0;
           }
           break;
-        case 0xA5 : // right button
+        case 0xA5 : // 오른쪽 버튼
           if (optionCur == 0) {
             level++;
             if (level == 5) {
@@ -846,7 +859,7 @@ void loop() {
             }
           }
           break;
-        case 0xEF : // left button
+        case 0xEF : // 왼쪽 버튼
           if (optionCur == 0) {
             level--;
             if (level == 0) {
@@ -854,7 +867,7 @@ void loop() {
             }
           }
           break;
-        case 0xC7 : // ok button
+        case 0xC7 : // ok 버튼
           if (optionCur == 2) {
             optionCur = 0;
             option_state = 0;
@@ -865,7 +878,9 @@ void loop() {
       }
     }
        
-            while(reset_state){ // handling for the score reset screen
+            // 리셋 화면 flag 가 1이면 아래 while 문이 반복 실행 된다.
+            // 리셋 화면을 OLED 화면에 나타낸다.
+            while(reset_state){
               u8g.firstPage();
                do {
                scoresReset();
@@ -876,19 +891,19 @@ void loop() {
                 irrecv.resume();
 
                 switch (ifrRcv) {
-                  case 0xE7 : // down button
+                  case 0xE7 : // 위 버튼
                     resetCur--;
                     if (resetCur == 1) {
                       resetCur = 3;
                     }
                     break;
-                  case 0xB5 : // up button
+                  case 0xB5 : // 아래 버튼
                     resetCur++;
                     if (resetCur == 4) {
                       resetCur = 2;
                     }
                     break;
-                  case 0xC7 : // ok button
+                  case 0xC7 : // ok 버튼
                     if (resetCur == 2) {
                       reset_eep();
                     }
@@ -899,7 +914,9 @@ void loop() {
               }  
   }
 
-  while(scores_state) { // handling for the score screen
+  // 점수 화면 flag 가 1이면 아래 while 문이 반복 실행 된다.
+  // 점수 화면을 OLED 화면에 나타낸다.
+  while(scores_state) {
     u8g.firstPage();
     do {
       scores();
@@ -910,7 +927,7 @@ void loop() {
       irrecv.resume();
 
       switch(ifrRcv) {
-        case 0xC7 : // ok button
+        case 0xC7 : // ok 버튼
           scores_state = 0;
           break;
       }
@@ -918,11 +935,13 @@ void loop() {
   }
  }
   
-  for(xspaR[0]=u8g.getWidth(); xspaR[0]>-9; xspaR[0]--) { // handling for the movement of obstacles
+  // 메뉴 화면 flag 가 0이 되어 while 문 바깥으로 나오면 아래 for 문이 실행된다. (게임 실행)
+  for(xspaR[0]=u8g.getWidth(); xspaR[0]>-9; xspaR[0]--) {
 
+  // 가장 빠른 몬스터를 기준으로 게임 화면 최신화가 진행된다.
+  // ex) timeRandom[0] 이 30 ms 라면, 게임 화면 최신화는 30 ms 마다 진행된다.
   if (millis() - timeLimit[0] > timeRandom[0]) {
     timeLimit[0] = millis();
-    
     
     u8g.firstPage();
     do {
@@ -935,24 +954,28 @@ void loop() {
           break;
         }
       }
-    }
+   }
 
+    // 나머지 1 ~ 21 번째 몬스터들은 자신의 시간 정보에 맞춰서 위치를 최신화 한다.
     for(int i=1; i<Length; i++) {
     if (millis() - timeLimit[i] > timeRandom[i]) {
       timeLimit[i] = millis();
       
-      if (i < Length/2) {
+      if (i < Length/2) { // 오른쪽 몬스터들의 x좌표는 점점 감소한다.
         xspaR[i]--;
-      } else {
+      } else { // 왼쪽 몬스터들의 x좌표는 점점 증가한다.
         xspaL[i - Length/2]++;
       }
 
+      // 오른쪽 몬스터들이 왼쪽 끝에 도달하였으면 새로 몬스터를 생성해준다.
       if (i < Length/2) {
         if (xspaR[i] == -8) {
           timeRandom[i] = random(timeLevel, timeLevel+30);
           yspaR[i] = random(u8g.getHeight() - 12) + 1;
           xspaR[i] = u8g.getWidth();
         }
+           
+      // 왼쪽 몬스터들이 오른쪽 끝에 도달하였으면 새로 몬스터를 생성해준다.
       } else {
         if (xspaL[i - Length/2] == u8g.getWidth() + 1) {
           timeRandom[i] = random(timeLevel, timeLevel+30);
@@ -969,22 +992,22 @@ void loop() {
     irrecv.resume();
 
     switch (ifrRcv) {
-      case 0xE7 : // up button
+      case 0xE7 : // 위 버튼 (캐릭터 위로 이동)
         rcvCtrl = 0;
         break;
-      case 0xB5 : // down button
+      case 0xB5 : // 아래 버튼 (아래로 이동)
         rcvCtrl = 1;
         break;
-      case 0xFF :
+      case 0xFF : // 실수로 또는 고의로 버튼을 연속으로 누르고 있는 경우 (rcvCtrl 값 유지)
         
         break;
-      case 0xA5 : // right button
+      case 0xA5 : // 오른쪽 버튼 (오른쪽으로 이동)
         rcvCtrl = 2;
         break;
-      case 0xEF : // left button
+      case 0xEF : // 왼쪽 버튼 (왼쪽으로 이동)
         rcvCtrl = 3;
         break;
-      case 0xC7 : // ok button
+      case 0xC7 : // ok 버튼 (총알 생성)
         attack();
         rcvCtrl = 999;
         break;
