@@ -47,8 +47,8 @@ int yspaL[11]; // 왼쪽에서 나오는 몬스터의 y좌표 정보
 int xspaL[11]; // 왼쪽에서 나오는 몬스터의 x좌표 정보
 int Length = sizeof(timeRandom) / sizeof(timeRandom[0]);
 
-// 게임 난이도는 1 ~ 4 단계가 있다. 난이도가 높아질 수록 몬스터 출현 속도가 빨라진다.
-// timeLevel을 낮출수록 몬스터의 출현 속도가 빨라진다.
+// 게임 난이도는 1 ~ 4 단계가 있다. 난이도가 높아질 수록 몬스터 이동 속도가 빨라진다.
+// timeLevel을 낮출수록 몬스터의 이동 속도가 빨라진다.
 int timeLevel;
 
 int yCtrl = u8g.getHeight() / 2; // 캐릭터의 y좌표 정보
@@ -666,7 +666,7 @@ void scoresReset () {
 // 게임 환경을 셋팅하는 함수이다.
 void reset() {
    
-  // 게임 난이도에 따라 몬스터 출현 속도 지정
+  // 게임 난이도에 따라 몬스터 이동 속도 지정 (timeLevel은 몬스터가 한번 스탭 하는데 걸리는 시간과 .)
   switch (level) {
     case 1 :
       timeLevel = 75;
@@ -956,7 +956,7 @@ void loop() {
       }
    }
 
-    // 나머지 1 ~ 21 번째 몬스터들은 자신의 시간 정보에 맞춰서 위치를 최신화 한다.
+    // 나머지 1 ~ 21 번째 몬스터들은 자신의 스탭 시간 정보에 맞춰서 위치를 최신화 한다.
     for(int i=1; i<Length; i++) {
     if (millis() - timeLimit[i] > timeRandom[i]) {
       timeLimit[i] = millis();
