@@ -20,7 +20,7 @@ unsigned long ifrRcv;
 int rcvCtrl;
 
 // 몬스터의 총 개수는 22개 이다.
-// timeRandom[22] 은 각 몬스터들이 움직이는 시간 간격 정보를 가지고 있다.
+// timeRandom[22] 은 각 몬스터들이 움직이는 시간 간격 정보를 가지고 있다. (각 몬스터들의 속도는 모두 다르다.)
 // ex) timeRandom[0] 이 30 ms 라면, 0 번째 몬스터는 30ms 마다 움직이는 것이다.
 // timeRandom[0] 이 가장 빠른 몬스터의 시간 정보를 가지고, timeRandom[21] 이 가장 느린 몬스터의 시간 정보를 가진다.
 // 시간 값이 작다는 것은 그만큼 몬스터의 속도가 빠르다는 것이다.
@@ -1045,8 +1045,10 @@ void loop() {
   }
   }
 
+  // 몬스터가 총알에 닿은 경우 또는 캐릭터가 몬스터에 닿은 경우에 대한 처리 부분이다.
   for(int i=0; i<Length / 2; i++) {
 
+    // 캐릭터의 주변 영역이다.
     int yP = yCtrl + 8;
     int yM = yCtrl - 3;
     int xP = xCtrl + 8;
@@ -1056,16 +1058,24 @@ void loop() {
     int at_xP;
     int at_xM;
 
+    // 총알이 몬스터에 닿은 경우에 대한 처리 부분이다.
     for (int k=0; k<attack_size; k++) {
+      
+      // 총알의 주변 영역이다.
       at_y = attack_yspa[k];
       at_xP = attack_xspa[k] + 8;
       at_xM = attack_xspa[k] - 8;
-      if((at_xM < xspaR[i]) && (at_xP > xspaR[i]) && (at_y < yspaR[i]+3) && (at_y > yspaR[i]-1)) { // handling for the obstacle attack
+         
+      // 오른쪽에서 나오는 몬스터가 총알에 맞은 경우
+      if((at_xM < xspaR[i]) && (at_xP > xspaR[i]) && (at_y < yspaR[i]+3) && (at_y > yspaR[i]-1)) {
         obs_kill++;
         attack_seek[k] = 0;
         xspaR[i] = u8g.getWidth();
         yspaR[i] = random(u8g.getHeight() - 12) + 1;
-      } else if ((at_y > yspaL[i]-1) && (at_y < yspaL[i]+3) && (at_xP > xspaL[i]) && (at_xM < xspaL[i])){
+      }
+      
+      // 왼쪽에서 나오는 몬스터가 총알에 맞은 경우
+      if ((at_y > yspaL[i]-1) && (at_y < yspaL[i]+3) && (at_xP > xspaL[i]) && (at_xM < xspaL[i])){
         obs_kill++;
         attack_seek[k] = 0;
         xspaL[i] = -8;
@@ -1073,31 +1083,32 @@ void loop() {
       }
     }
 
-    
-    if (((xM < xspaR[i]) && (xP > xspaR[i]) && (yM < yspaR[i]) && (yP > yspaR[i])) || ((yP > yspaL[i]) && (yM < yspaL[i]) && (xP > xspaL[i]) && (xM < xspaL[i]))) { // handling for the character death
+    // 캐릭터가 몬스터에 닿은 경우에 대한 처리 부분이다.
+    if (((xM < xspaR[i]) && (xP > xspaR[i]) && (yM < yspaR[i]) && (yP > yspaR[i])) || ((yP > yspaL[i]) && (yM < yspaL[i]) && (xP > xspaL[i]) && (xM < xspaL[i]))) {
 
-      time_score = (millis() - timeM_score) / 1000;
-      time_totalScore = time_score + obs_kill;
+      time_score = (millis() - timeM_score) / 1000; // 게임 버틴 시간 (단위 : second)
+      time_totalScore = time_score + obs_kill; // 게임 버틴 시간에 킬 수를 더한 총 시간 기록
       score_eep();
       inGame_sec = 0;
       inGame_mil = 0;
       inGame_sec_limit = 0;
       inGame_mil_limit = 0;
       
-      
+      // 게임 종료 화면을 OLED 화면에 나타낸다.
       while(true) {        
         u8g.firstPage();
            do {
             end_draw();
            } while(u8g.nextPage());
+           
         if(irrecv.decode(&results)) {
           ifrRcv = results.value & 0xFF;
           irrecv.resume();
 
-          if(ifrRcv == 0xC7) { // ok button         
+          if(ifrRcv == 0xC7) { // ok 버튼      
           menu_state = 1;
-          i = Length / 2;
-          xspaR[0] = -9;
+          i = Length / 2; // 1049 line 의 for문을 바로 나가기 위한 값
+          xspaR[0] = -9; // 939 line 의 for문을 바로 나가기 위한 값
           break;
         }
         }        
@@ -1106,8 +1117,8 @@ void loop() {
     }        
   }
 
+  // 0 번째 몬스터가 끝 라인까지 도달한 경우, 속도와 y좌표를 무작위로 새로 부여한다.
   timeRandom[0] = random(timeLevel, timeLevel+30);
   yspaR[0] = random(u8g.getHeight() - 12) + 1;
-
   Switch();
 }
